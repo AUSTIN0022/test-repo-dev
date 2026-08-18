@@ -1,0 +1,444 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  admin
+  sales_manager
+  sales_agent
+  field_executive
+  social_media_manager
+}
+
+enum LeadStatus {
+  new
+  contacted
+  interested
+  site_visit_scheduled
+  negotiation
+  won
+  lost
+  not_responding
+}
+
+enum LeadTemperature {
+  cold
+  warm
+  hot
+}
+
+enum PropertyType {
+  apartment
+  villa
+  plot
+  commercial
+  rental
+}
+
+enum PropertyStatus {
+  available
+  hold
+  sold
+  rented
+}
+
+enum CallStatus {
+  initiated
+  agent_ringing
+  agent_answered
+  lead_ringing
+  in_conference
+  completed
+  failed
+  no_answer
+}
+
+enum AttendanceStatus {
+  present
+  late
+  half_day
+  absent
+  field_visit
+}
+
+enum SocialPostStatus {
+  idea
+  draft
+  scheduled
+  published
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   @default("agency")
+  logoUrl   String?  @map("logo_url")
+  email     String?
+  phone     String?
+  website   String?
+  country   String?  @default("India")
+  region    String?
+  city      String?  @default("Gurgaon")
+  address   String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  users               User[]
+  properties          Property[]
+  leads               Lead[]
+  calls               Call[]
+  messages            Message[]
+  followups           Followup[]
+  attendances         Attendance[]
+  socialPosts         SocialPost[]
+  notifications       Notification[]
+  integrationSettings IntegrationSettings?
+
+  @@map("organizations")
+}
+
+model User {
+  id             String       @id @default(uuid())
+  organizationId String       @map("organization_id")
+  email          String       @unique
+  passwordHash   String       @map("password_hash")
+  name           String
+  phone          String?
+  role           String       @default("sales_agent")
+  avatarUrl      String?      @map("avatar_url")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  assignedLeads Lead[]       @relation("AssignedAgent")
+  activities    Activity[]
+  calls         Call[]
+  followups     Followup[]
+  attendances   Attendance[]
+  socialPosts   SocialPost[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Lead {
+  id                String       @id @default(uuid())
+  organizationId    String       @map("organization_id")
+  fullName          String       @map("full_name")
+  phone             String
+  email             String?
+  source            String       @default("Manual") // 36 Acre, MagicBricks, Housing, Facebook, Instagram, Website, Referral, Manual, Other
+  propertyType      String       @default("apartment") @map("property_type")
+  budgetMin         Int          @default(5000000) @map("budget_min")
+  budgetMax         Int          @default(15000000) @map("budget_max")
+  preferredLocation String       @default("Gurgaon") @map("preferred_location")
+  status            String       @default("new") // new, contacted, interested, site_visit_scheduled, negotiation, won, lost, not_responding
+  temperature       String       @default("warm") // cold, warm, hot
+  assignedAgentId   String?      @map("assigned_agent_id")
+  notes             String?
+  nextFollowUpAt    DateTime?    @map("next_follow_up_at") @db.Timestamptz(6)
+  lastContactedAt   DateTime?    @map("last_contacted_at") @db.Timestamptz(6)
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization  Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedAgent User?           @relation("AssignedAgent", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  activities    Activity[]
+  calls         Call[]
+  messages      Message[]
+  followups     Followup[]
+  shares        PropertyShare[]
+
+  @@map("leads")
+}
+
+model Property {
+  id             String       @id @default(uuid())
+  organizationId String?      @map("organization_id")
+  title          String
+  slug           String
+  status         String       @default("available") // available, hold, sold, rented
+  propertyType   String       @map("property_type") // apartment, villa, plot, commercial, rental
+  listingType    String       @default("sale") @map("listing_type")
+  address        String
+  city           String       @default("Gurgaon")
+  state          String       @default("Haryana")
+  postalCode     String       @default("122001") @map("postal_code")
+  latitude       Float?
+  longitude      Float?
+  price          Int
+  bedrooms       Int          @default(3)
+  bathrooms      Decimal      @default(2.5) @db.Decimal
+  sqft           Int          @default(1850)
+  floor          Int?         @default(5)
+  furnishing     String?      @default("semi-furnished")
+  developer      String?      @default("DLF Limited")
+  description    String
+  publicNotes    String?      @map("public_notes")
+  internalNotes  String?      @map("internal_notes")
+  featured       Boolean      @default(false)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  images          PropertyImage[]
+  documents       PropertyDocument[]
+  features        PropertyFeature[]
+  shareProperties ShareProperty[]
+  shareViews      ShareView[]
+  interests       PropertyInterest[]
+
+  @@map("properties")
+}
+
+model PropertyImage {
+  id         String   @id @default(uuid())
+  propertyId String   @map("property_id")
+  pathname   String
+  altText    String   @default("Property Image") @map("alt_text")
+  sortOrder  Int      @default(0) @map("sort_order")
+  isCover    Boolean  @default(false) @map("is_cover")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("property_images")
+}
+
+model PropertyDocument {
+  id           String   @id @default(uuid())
+  propertyId   String   @map("property_id")
+  pathname     String
+  filename     String
+  documentType String   @default("brochure") @map("document_type")
+  isPublic     Boolean  @default(true) @map("is_public")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  property     Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("property_documents")
+}
+
+model PropertyFeature {
+  id         String   @id @default(uuid())
+  propertyId String   @map("property_id")
+  feature    String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("property_features")
+}
+
+model PropertyShare {
+  id             String    @id @default(uuid())
+  token          String    @unique
+  leadId         String?   @map("lead_id")
+  organizationId String?   @map("organization_id")
+  title          String
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt      DateTime? @map("expires_at") @db.Timestamptz(6)
+  revokedAt      DateTime? @map("revoked_at") @db.Timestamptz(6)
+
+  lead            Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  shareProperties ShareProperty[]
+  shareViews      ShareView[]
+  interests       PropertyInterest[]
+
+  @@map("property_shares")
+}
+
+model ShareProperty {
+  id         String        @id @default(uuid())
+  shareId    String        @map("share_id")
+  propertyId String        @map("property_id")
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  share      PropertyShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  property   Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([shareId, propertyId])
+  @@map("share_properties")
+}
+
+model ShareView {
+  id         String        @id @default(uuid())
+  shareId    String        @map("share_id")
+  propertyId String        @map("property_id")
+  sessionId  String        @map("session_id")
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  share      PropertyShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  property   Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("share_views")
+}
+
+model PropertyInterest {
+  id         String        @id @default(uuid())
+  shareId    String        @map("share_id")
+  propertyId String        @map("property_id")
+  sessionId  String        @map("session_id")
+  response   String
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  share      PropertyShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  property   Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([shareId, propertyId, sessionId])
+  @@map("property_interest")
+}
+
+model Activity {
+  id        String   @id @default(uuid())
+  leadId    String   @map("lead_id")
+  userId    String?  @map("user_id")
+  type      String   // call, whatsapp, email, note, status_change, share, site_visit
+  title     String
+  details   String?
+  metadata  String?  // JSON string
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  lead Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("activities")
+}
+
+model Call {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  leadId         String   @map("lead_id")
+  agentId        String   @map("agent_id")
+  callSid        String?  @map("call_sid")
+  conferenceSid  String?  @map("conference_sid")
+  status         String   @default("initiated") // initiated, agent_ringing, agent_answered, lead_ringing, in_conference, completed, failed, no_answer
+  duration       Int      @default(0) // seconds
+  recordingUrl   String?  @map("recording_url")
+  outcome        String?  @default("Connected with lead")
+  startedAt      DateTime @default(now()) @map("started_at") @db.Timestamptz(6)
+  endedAt        DateTime? @map("ended_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  agent        User         @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@map("calls")
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  leadId         String   @map("lead_id")
+  senderId       String?  @map("sender_id")
+  type           String   @default("whatsapp") // whatsapp, sms, email
+  content        String
+  status         String   @default("sent") // sent, delivered, read, failed
+  sentAt         DateTime @default(now()) @map("sent_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Followup {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  leadId         String    @map("lead_id")
+  agentId        String    @map("agent_id")
+  type           String    @default("whatsapp") // call, whatsapp, sms, email, site_visit
+  note           String
+  dueDate        DateTime  @map("due_date") @db.Timestamptz(6)
+  status         String    @default("pending") // pending, completed, snoozed
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  agent        User         @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@map("followups")
+}
+
+model Attendance {
+  id                String    @id @default(uuid())
+  organizationId   String    @map("organization_id")
+  userId            String    @map("user_id")
+  checkInTime       DateTime  @default(now()) @map("check_in_time") @db.Timestamptz(6)
+  checkOutTime      DateTime? @map("check_out_time") @db.Timestamptz(6)
+  checkInLatitude   Float?    @map("check_in_latitude")
+  checkInLongitude  Float?    @map("check_in_longitude")
+  checkInLocation   String?   @default("Golf Course Road Office, Gurgaon") @map("check_in_location")
+  checkOutLatitude  Float?    @map("check_out_latitude")
+  checkOutLongitude Float?    @map("check_out_longitude")
+  checkOutLocation  String?   @map("check_out_location")
+  status            String    @default("present") // present, late, half_day, absent, field_visit
+  notes             String?
+  selfieUrl         String?   @map("selfie_url")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("attendances")
+}
+
+model SocialPost {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  authorId       String    @map("author_id")
+  postType       String    @default("instagram_post") // instagram_post, instagram_reel, facebook_post, linkedin_post, story
+  caption        String
+  mediaUrl       String?   @map("media_url")
+  status         String    @default("draft") // idea, draft, scheduled, published
+  scheduledAt    DateTime? @map("scheduled_at") @db.Timestamptz(6)
+  publishedAt    DateTime? @map("published_at") @db.Timestamptz(6)
+  notes          String?
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  author       User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("social_posts")
+}
+
+model Notification {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  userId         String   @map("user_id")
+  title          String
+  message        String
+  type           String   @default("info") // lead_assigned, missed_call, followup_due, site_visit, property_shared, attendance_issue, social_due
+  link           String?
+  isRead         Boolean  @default(false) @map("is_read")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model IntegrationSettings {
+  id                    String   @id @default(uuid())
+  organizationId        String   @unique @map("organization_id")
+  twilioSid             String?  @map("twilio_sid")
+  twilioToken           String?  @map("twilio_token")
+  twilioPhone           String?  @map("twilio_phone")
+  whatsappNumber        String?  @map("whatsapp_number")
+  resendApiKey          String?  @map("resend_api_key")
+  webhookSecret         String?  @default("ef_sec_gurgaon_2026") @map("webhook_secret")
+  openaiApiKey          String?  @map("openai_api_key")
+  assignmentMode        String   @default("round_robin") @map("assignment_mode") // round_robin, manual, least_busy
+  maxCallDurationSeconds Int      @default(120) @map("max_call_duration_seconds") // Safeguard for Twilio trial minutes!
+  dryRunCall            Boolean  @default(true) @map("dry_run_call")
+  dryRunMessage         Boolean  @default(true) @map("dry_run_message")
+  dryRunEmail           Boolean  @default(true) @map("dry_run_email")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("integration_settings")
+}
