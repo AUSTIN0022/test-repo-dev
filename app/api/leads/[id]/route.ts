@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSessionUser } from '@/lib/auth'
+
+async function getAuthorizedUser() {
+  const user = await getSessionUser()
+  if (!user) {
+    return { response: NextResponse.json({ error: 'Authentication required' }, { status: 401 }) }
+  }
+
+  return { user }
+}
 
 // GET /api/leads/[id] - Get Lead Detail with Full Timeline & Recommended Properties
 export async function GET(
@@ -8,9 +18,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const authorization = await getAuthorizedUser()
+    if (authorization.response) return authorization.response
 
     const lead = await prisma.lead.findUnique({
-      where: { id },
+      where: { id, organizationId: authorization.user.organizationId },
       include: {
         assignedAgent: {
           select: { id: true, name: true, phone: true, email: true, role: true, avatarUrl: true },
@@ -55,11 +67,16 @@ export async function GET(
     const recommendedProperties = await prisma.property.findMany({
       where: {
         status: 'available',
-        OR: [
-          { propertyType: lead.propertyType },
-          { city: { contains: lead.preferredLocation, mode: 'insensitive' } },
-          { address: { contains: lead.preferredLocation, mode: 'insensitive' } },
-          { price: { gte: Math.floor(lead.budgetMin * 0.7), lte: Math.ceil(lead.budgetMax * 1.3) } },
+        OR: [{ organizationId: authorization.user.organizationId }, { organizationId: null }],
+        AND: [
+          {
+            OR: [
+              { propertyType: lead.propertyType },
+              { city: { contains: lead.preferredLocation, mode: 'insensitive' } },
+              { address: { contains: lead.preferredLocation, mode: 'insensitive' } },
+              { price: { gte: Math.floor(lead.budgetMin * 0.7), lte: Math.ceil(lead.budgetMax * 1.3) } },
+            ],
+          },
         ],
       },
       take: 6,
@@ -79,9 +96,13 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
+    const authorization = await getAuthorizedUser()
+    if (authorization.response) return authorization.response
     const body = await req.json()
 
-    const existingLead = await prisma.lead.findUnique({ where: { id } })
+    const existingLead = await prisma.lead.findUnique({
+      where: { id, organizationId: authorization.user.organizationId },
+    })
     if (!existingLead) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }
@@ -137,7 +158,16 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-    await prisma.lead.delete({ where: { id } })
+    const authorization = await getAuthorizedUser()
+    if (authorization.response) return authorization.response
+
+    const deletedLead = await prisma.lead.deleteMany({
+      where: { id, organizationId: authorization.user.organizationId },
+    })
+    if (deletedLead.count === 0) {
+      return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
+    }
+
     return NextResponse.json({ success: true, message: 'Lead deleted' })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
