@@ -52,8 +52,31 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
-    if (!body.fullName || !body.phone) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'Request body must be a JSON object' }, { status: 400 })
+    }
+
+    const fullName = typeof body.fullName === 'string' ? body.fullName.trim() : ''
+    const phone = typeof body.phone === 'string' ? body.phone.trim() : ''
+
+    if (!fullName || !phone) {
       return NextResponse.json({ error: 'fullName and phone are required' }, { status: 400 })
+    }
+
+    const budgetMin = body.budgetMin === undefined ? 5000000 : Number(body.budgetMin)
+    const budgetMax = body.budgetMax === undefined ? 15000000 : Number(body.budgetMax)
+
+    if (
+      !Number.isSafeInteger(budgetMin) ||
+      !Number.isSafeInteger(budgetMax) ||
+      budgetMin < 0 ||
+      budgetMax < 0 ||
+      budgetMin > budgetMax
+    ) {
+      return NextResponse.json(
+        { error: 'budgetMin and budgetMax must be non-negative integers with budgetMin <= budgetMax' },
+        { status: 400 }
+      )
     }
 
     let org = await prisma.organization.findFirst()
@@ -71,13 +94,13 @@ export async function POST(req: NextRequest) {
     const lead = await prisma.lead.create({
       data: {
         organizationId: org.id,
-        fullName: body.fullName,
-        phone: body.phone,
+        fullName,
+        phone,
         email: body.email || null,
         source: body.source || 'Manual Entry',
         propertyType: body.propertyType || 'apartment',
-        budgetMin: body.budgetMin ? parseInt(body.budgetMin, 10) : 5000000,
-        budgetMax: body.budgetMax ? parseInt(body.budgetMax, 10) : 15000000,
+        budgetMin,
+        budgetMax,
         preferredLocation: body.preferredLocation || 'Gurgaon',
         status: body.status || 'new',
         temperature: body.temperature || 'warm',
@@ -99,6 +122,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, lead })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('Manual lead creation error:', err)
+    return NextResponse.json({ error: 'Unable to create lead' }, { status: 500 })
   }
 }

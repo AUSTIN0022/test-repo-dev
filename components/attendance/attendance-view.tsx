@@ -1,5 +1,7 @@
 'use client'
 
+
+
 import React, { useState, useEffect } from 'react'
 import {
   UserCheck,
@@ -12,6 +14,8 @@ import {
 interface AttendanceViewProps {
   currentUser: { id: string; name: string; role: string }
 }
+
+
 
 export default function AttendanceView({ currentUser }: AttendanceViewProps) {
   const [attendances, setAttendances] = useState<any[]>([])
