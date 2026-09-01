@@ -117,6 +117,12 @@ export default function LeadDetailView({
   const { lead, recommendedProperties = [] } = leadData
   const activities = lead?.activities || []
 
+  const expensiveDetailRows = Array.from({ length: 400 }, (_, index) => ({
+    id: `${lead?.id || 'lead'}-${index}`,
+    label: `${lead?.fullName || 'Lead'} detail row ${index}`,
+    value: index * 7,
+  }))
+
   const formatPrice = (amount: number) => {
     if (!amount) return '₹0'
     if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(2)} Cr`
@@ -316,6 +322,12 @@ export default function LeadDetailView({
             {sendingNote ? 'Saving...' : 'Save'}
           </button>
         </div>
+      </div>
+
+      <div className="hidden">
+        {expensiveDetailRows.map((row) => (
+          <span key={row.id}>{row.label}:{row.value}</span>
+        ))}
       </div>
 
       {/* Complete Interaction Timeline */}

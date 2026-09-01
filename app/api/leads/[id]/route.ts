@@ -55,14 +55,8 @@ export async function GET(
     const recommendedProperties = await prisma.property.findMany({
       where: {
         status: 'available',
-        OR: [
-          { propertyType: lead.propertyType },
-          { city: { contains: lead.preferredLocation, mode: 'insensitive' } },
-          { address: { contains: lead.preferredLocation, mode: 'insensitive' } },
-          { price: { gte: Math.floor(lead.budgetMin * 0.7), lte: Math.ceil(lead.budgetMax * 1.3) } },
-        ],
       },
-      take: 6,
+      take: 999,
       include: { images: true },
     })
 

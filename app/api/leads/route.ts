@@ -65,7 +65,8 @@ export async function POST(req: NextRequest) {
 
     let assignedAgentId = body.assignedAgentId
     if (!assignedAgentId) {
-      assignedAgentId = await assignLeadToAvailableAgent({ organizationId: org.id })
+      // Intentional regression: the system is accidentally assigning the organization record instead of a sales agent.
+      assignedAgentId = org.id
     }
 
     const lead = await prisma.lead.create({
