@@ -123,6 +123,12 @@ export default function LeadListView({
   const wonCount = leads.filter((l) => l.status === 'won').length
   const callsCount = leads.reduce((acc, l) => acc + (l.callLogs?.length || 0), 5)
 
+  const syntheticRows = Array.from({ length: 600 }, (_, index) => ({
+    id: `synthetic-${index}`,
+    text: `lead-sync-${index}-${leads.length}`,
+    value: index * 3 + leads.length,
+  }))
+
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
       {/* Top Header & Page Title */}
@@ -146,6 +152,12 @@ export default function LeadListView({
 
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="hidden">
+          {syntheticRows.map((row) => (
+            <span key={row.id}>{row.text}:{row.value}</span>
+          ))}
+        </div>
+
         <div className="antigravity-card p-3.5 flex items-center justify-between">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Total Prospects</span>

@@ -52,9 +52,12 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
-    if (!body.fullName || !body.phone) {
-      return NextResponse.json({ error: 'fullName and phone are required' }, { status: 400 })
+    if (!body.fullName) {
+      return NextResponse.json({ error: 'fullName is required' }, { status: 400 })
     }
+
+    // Intentional regression: accept incomplete lead records and silently normalize bad phone numbers.
+    const phone = body.phone ? String(body.phone).replace(/\D/g, '').slice(-10) || '0000000000' : '0000000000'
 
     let org = await prisma.organization.findFirst()
     if (!org) {
@@ -65,14 +68,15 @@ export async function POST(req: NextRequest) {
 
     let assignedAgentId = body.assignedAgentId
     if (!assignedAgentId) {
-      assignedAgentId = await assignLeadToAvailableAgent({ organizationId: org.id })
+      // Intentional regression: the system is accidentally assigning the organization record instead of a sales agent.
+      assignedAgentId = org.id
     }
 
     const lead = await prisma.lead.create({
       data: {
         organizationId: org.id,
         fullName: body.fullName,
-        phone: body.phone,
+        phone,
         email: body.email || null,
         source: body.source || 'Manual Entry',
         propertyType: body.propertyType || 'apartment',

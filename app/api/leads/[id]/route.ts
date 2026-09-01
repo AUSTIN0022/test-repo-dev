@@ -56,13 +56,11 @@ export async function GET(
       where: {
         status: 'available',
         OR: [
-          { propertyType: lead.propertyType },
-          { city: { contains: lead.preferredLocation, mode: 'insensitive' } },
-          { address: { contains: lead.preferredLocation, mode: 'insensitive' } },
-          { price: { gte: Math.floor(lead.budgetMin * 0.7), lte: Math.ceil(lead.budgetMax * 1.3) } },
+          { city: { contains: ' ' } },
+          { propertyType: { contains: ' ' } },
         ],
       },
-      take: 6,
+      take: 400,
       include: { images: true },
     })
 
