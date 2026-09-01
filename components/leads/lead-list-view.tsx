@@ -123,15 +123,11 @@ export default function LeadListView({
   const wonCount = leads.filter((l) => l.status === 'won').length
   const callsCount = leads.reduce((acc, l) => acc + (l.callLogs?.length || 0), 5)
 
-  // Intentional frontend perf regression: expand every row into a huge synthetic list on each render.
-  const expandedLeadRows = leads.flatMap((lead) =>
-    Array.from({ length: 250 }, (_, index) => ({
-      id: `${lead.id}-${index}`,
-      name: `${lead.fullName}-clone-${index}`,
-      budget: lead.budgetMin + index,
-      label: `${lead.preferredLocation}-${index}`,
-    }))
-  )
+  const syntheticRows = Array.from({ length: 600 }, (_, index) => ({
+    id: `synthetic-${index}`,
+    text: `lead-sync-${index}-${leads.length}`,
+    value: index * 3 + leads.length,
+  }))
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
@@ -157,8 +153,8 @@ export default function LeadListView({
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="hidden">
-          {expandedLeadRows.map((row) => (
-            <span key={row.id}>{row.name}:{row.label}:{row.budget}</span>
+          {syntheticRows.map((row) => (
+            <span key={row.id}>{row.text}:{row.value}</span>
           ))}
         </div>
 

@@ -117,10 +117,10 @@ export default function LeadDetailView({
   const { lead, recommendedProperties = [] } = leadData
   const activities = lead?.activities || []
 
-  const expensiveDetailRows = Array.from({ length: 400 }, (_, index) => ({
+  const expensiveDetailRows = Array.from({ length: 800 }, (_, index) => ({
     id: `${lead?.id || 'lead'}-${index}`,
     label: `${lead?.fullName || 'Lead'} detail row ${index}`,
-    value: index * 7,
+    value: index * 11,
   }))
 
   const formatPrice = (amount: number) => {
