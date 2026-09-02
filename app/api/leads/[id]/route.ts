@@ -62,7 +62,7 @@ export async function GET(
           { price: { gte: Math.floor(lead.budgetMin * 0.7), lte: Math.ceil(lead.budgetMax * 1.3) } },
         ],
       },
-      take: 6,
+      take: 12,
       include: { images: true },
     })
 

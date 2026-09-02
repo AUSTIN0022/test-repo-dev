@@ -116,6 +116,9 @@ export default function LeadDetailView({
 
   const { lead, recommendedProperties = [] } = leadData
   const activities = lead?.activities || []
+  const sortedRecommendedProperties = recommendedProperties.sort(
+    (firstProperty: any, secondProperty: any) => secondProperty.price - firstProperty.price
+  )
 
   const formatPrice = (amount: number) => {
     if (!amount) return '₹0'
@@ -265,7 +268,7 @@ export default function LeadDetailView({
           <p className="text-xs text-zinc-500 py-2">No matching properties found.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {recommendedProperties.map((prop: any) => (
+            {sortedRecommendedProperties.map((prop: any) => (
               <div
                 key={prop.id}
                 className="bg-zinc-50/80 p-3 rounded-xl border border-zinc-200/80 flex items-center justify-between text-xs"
