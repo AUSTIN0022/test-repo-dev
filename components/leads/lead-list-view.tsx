@@ -33,6 +33,8 @@ export default function LeadListView({
 
   const [leads, setLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
 
   const search = searchParams.get('search') || ''
   const selectedSource = searchParams.get('source') || 'all'
@@ -57,11 +59,14 @@ export default function LeadListView({
       if (selectedSource !== 'all') params.append('source', selectedSource)
       if (selectedStatus !== 'all') params.append('status', selectedStatus)
       if (selectedTemperature !== 'all') params.append('temperature', selectedTemperature)
+      params.append('page', String(page))
+      params.append('limit', '25')
 
       const res = await fetch(`/api/leads?${params.toString()}`)
       const data = await res.json()
       if (data.success) {
         setLeads(data.leads)
+        setHasMore(data.pagination?.total > page * 25)
       }
     } catch (e) {
       console.error(e)
@@ -72,6 +77,10 @@ export default function LeadListView({
 
   useEffect(() => {
     fetchLeads()
+  }, [search, selectedSource, selectedStatus, selectedTemperature])
+
+  useEffect(() => {
+    setPage(1)
   }, [search, selectedSource, selectedStatus, selectedTemperature])
 
   const formatPrice = (amount: number) => {
@@ -432,6 +441,24 @@ export default function LeadListView({
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
+              disabled={page === 1 || loading}
+              className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <span className="text-xs font-mono text-zinc-500">Page {page}</span>
+            <button
+              onClick={() => setPage((currentPage) => currentPage + 1)}
+              disabled={!hasMore || loading}
+              className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-bold disabled:opacity-40"
+            >
+              Next
+            </button>
           </div>
         </>
       )}

@@ -11,6 +11,8 @@ export async function GET(req: NextRequest) {
     const agentId = searchParams.get('agentId')
     const temperature = searchParams.get('temperature')
     const search = searchParams.get('search')
+    const page = Number(searchParams.get('page') || 1)
+    const limit = Number(searchParams.get('limit') || 25)
 
     const where: any = {}
 
@@ -28,20 +30,25 @@ export async function GET(req: NextRequest) {
       ]
     }
 
-    const leads = await prisma.lead.findMany({
-      where,
-      include: {
-        assignedAgent: {
-          select: { id: true, name: true, phone: true, role: true, avatarUrl: true },
+    const [leads, total] = await Promise.all([
+      prisma.lead.findMany({
+        where,
+        skip: page * limit,
+        take: limit,
+        include: {
+          assignedAgent: {
+            select: { id: true, name: true, phone: true, role: true, avatarUrl: true },
+          },
+          _count: {
+            select: { calls: true, messages: true, activities: true, followups: true, shares: true },
+          },
         },
-        _count: {
-          select: { calls: true, messages: true, activities: true, followups: true, shares: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.lead.count({ where }),
+    ])
 
-    return NextResponse.json({ success: true, leads })
+    return NextResponse.json({ success: true, leads, pagination: { page, limit, total } })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
